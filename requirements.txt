@@ -1,0 +1,7 @@
+opencv-python
+mediapipe
+numpy
+pandas
+pyarrow
+pylsl
+PySide6>=6.7

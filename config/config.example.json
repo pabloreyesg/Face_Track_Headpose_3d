@@ -1,0 +1,89 @@
+{
+  "language": "es",
+  "camera": {
+    "index": 0,
+    "target_process_fps": 30.0,
+    "requested_fps": 120.0,
+    "resolutions": [
+      [
+        3840,
+        2160
+      ],
+      [
+        2560,
+        1440
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1600,
+        900
+      ],
+      [
+        1280,
+        720
+      ],
+      [
+        960,
+        540
+      ],
+      [
+        640,
+        480
+      ]
+    ],
+    "fps_options": [
+      120.0,
+      60.0,
+      30.0
+    ],
+    "mode_probe_frames": 12,
+    "fps_safety_margin": 1.2
+  },
+  "tracking": {
+    "smoothing_alpha": 0.9,
+    "model_path": "face_landmarker.task",
+    "model_url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task"
+  },
+  "calibration": {
+    "smoothing_alpha": 0.5,
+    "stability_window": 10,
+    "stability_std_deg": 2.0,
+    "point_timeout_s": 6.0,
+    "min_range_deg": 6.0,
+    "fallback_focal_length_px": 850.0,
+    "known_eye_distance_mm": 63.0
+  },
+  "lsl": {
+    "outlet_name": "HeadTracking",
+    "outlet_type": "HeadPose",
+    "outlet_channels": 4,
+    "outlet_srate": 30.0,
+    "outlet_source_id": "headtracker",
+    "stream_search_timeout_s": 40.0,
+    "watchdog_enabled": true,
+    "watchdog_check_interval_s": 3.0,
+    "watchdog_resolve_timeout_s": 0.75,
+    "watchdog_lost_after_misses": 2
+  },
+  "logging": {
+    "chunk_size": 300,
+    "save_head_pose": true,
+    "save_landmarks": true,
+    "save_blendshapes": true,
+    "save_markers": true
+  },
+  "video": {
+    "enabled": false,
+    "require_marker_stream": true,
+    "save_frame_timestamps": true,
+    "codec": "mp4v",
+    "queue_size": 180
+  },
+  "display": {
+    "show_preview": true,
+    "draw_landmarks": true
+  }
+}

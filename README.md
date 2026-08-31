@@ -1,80 +1,96 @@
-# Head Tracker with LSL and MediaPipe
+# HeadTracker
 
-This project implements a real-time head tracking system using MediaPipe and OpenCV. The script is designed to capture head orientation (Yaw, Pitch, Roll) and estimated distance to the camera, transmitting them via an LSL (Lab Streaming Layer) stream. It is ideal for human-computer interaction experiments, visual attention studies, or synchronization with other biometric devices.
+HeadTracker is a laboratory application for real-time head tracking using MediaPipe, OpenCV and Lab Streaming Layer (LSL).
 
-## Features
+HeadTracker es una aplicación de laboratorio para seguimiento de la cabeza en tiempo real mediante MediaPipe, OpenCV y Lab Streaming Layer (LSL).
 
-- Real-time facial tracking with MediaPipe.
-- Calculation of head orientation: Yaw, Pitch, Roll.
-- Distance estimation in millimeters based on eye separation.
-- Data transmission via LSL in a stream named `HeadTracking`.
-- Capture events from an optional LSL stream (e.g., experimental triggers).
-- Automatic initial calibration of the neutral orientation point.
-- Exponential smoothing of output values.
-- Live visualization with superimposed annotations.
-- Data logging to high-efficiency `.parquet` files:
-  - `*_head_tracking_data.parquet`
-  - `*_landmarks_data.parquet`
+The application is designed for experimental acquisition rather than video recording. Raw camera frames are processed in memory and are not saved by default. Optional video recording is only enabled when it can be associated with an LSL marker stream and is accompanied by per-frame timestamps.
 
-## Requirements
+La aplicación está diseñada para adquisición experimental y no como sistema de grabación de video. Los frames de cámara se procesan en memoria y no se guardan por defecto. La grabación de video es opcional y solo se habilita cuando puede asociarse con un stream de marcadores LSL; cada frame grabado conserva además su timestamp.
 
-Install the following dependencies using pip:
+## Documentation / Documentación
 
-```bash
-pip install opencv-python mediapipe pandas pyarrow pylsl numpy
-```
+- [Guía de usuario en español](docs/es/GUIA_USUARIO.md)
+- [User guide in English](docs/en/USER_GUIDE.md)
 
-## Quick Instructions
-Install dependencies (if you will use the source code):
+## Main features / Funciones principales
 
-```
+- Real-time head pose: yaw, pitch, roll and estimated camera-to-face distance.
+- MediaPipe Face Landmarker: facial landmarks and blendshapes.
+- LSL input for experimental markers/triggers.
+- LSL output for head pose.
+- LSL watchdog based on stream identity (`source_id`), not on marker frequency.
+- Incremental Parquet logging.
+- Raw and filtered head-pose values are both preserved.
+- Camera mode detection with measured FPS and manual mode selection.
+- Spanish and English interface.
+- Video disabled by default.
+- Optional synchronized video with per-frame timestamps and timing report.
 
-pip install opencv-python mediapipe pandas pyarrow pylsl numpy
-Run the system:
+## Quick start / Inicio rápido
 
-
-python head_tracker.py
-```
-
-# Head Tracker con LSL y MediaPipe
-
-Este proyecto implementa un sistema de seguimiento de cabeza en tiempo real utilizando MediaPipe y OpenCV. El script está diseñado para capturar la orientación de la cabeza (Yaw, Pitch, Roll) y la distancia estimada a la cámara, transmitiéndolos mediante un stream LSL (Lab Streaming Layer). Es ideal para experimentos de interacción humano-computadora, estudios de atención visual o sincronización con otros dispositivos biométricos.
-
-## Características
-
-- Seguimiento facial en tiempo real con MediaPipe.
-- Cálculo de orientación de la cabeza: Yaw, Pitch, Roll.
-- Estimación de distancia en milímetros con base en la separación ocular.
-- Transmisión de datos vía LSL en un stream llamado `HeadTracking`.
-- Captura de eventos desde un stream LSL opcional (por ejemplo, triggers experimentales).
-- Calibración inicial automática del punto neutro de orientación.
-- Suavizado exponencial de los valores de salida.
-- Visualización en vivo con anotaciones superpuestas.
-- Registro de datos en archivos `.parquet` de alta eficiencia:
-  - `*_head_tracking_data.parquet`
-  - `*_landmarks_data.parquet`
-
-## Requisitos
-
-Instala las siguientes dependencias usando pip:
+Python 3.12 is recommended for the current project environment.
 
 ```bash
-pip install opencv-python mediapipe pandas pyarrow pylsl numpy
+python -m venv venv_head
+source venv_head/bin/activate
+pip install -r requirements.txt
+python main.py
 ```
 
-## Instrucciones rápidas
-
-Instala dependencias (si usarás el código fuente):
+On systems where synchronized video retiming is required, install FFmpeg:
 
 ```bash
-
-pip install opencv-python mediapipe pandas pyarrow pylsl numpy
+sudo apt install ffmpeg
 ```
 
-### Ejecuta el sistema:
+The terminal diagnostic interface remains available:
 
 ```bash
-python head_tracker.py
+python main.py --cli
 ```
 
-**También puedes usar el ejecutable incluido si estás en Windows (head_tracker.exe)**
+A custom configuration can be supplied with:
+
+```bash
+python main.py --config config/config.example.json
+```
+
+## Privacy-oriented default behavior / Comportamiento predeterminado orientado a privacidad
+
+By default, camera images are not written to disk. The preview may be visible while frames are processed, but the frames are discarded after processing.
+
+Por defecto, las imágenes de cámara no se escriben en disco. El preview puede mostrarse durante la adquisición, pero los frames se descartan después del procesamiento.
+
+If video is enabled, `video_timestamps.parquet` is the authoritative temporal reference. The MP4 file is a visual representation and may be globally retimed after acquisition to match the observed session duration.
+
+Si se habilita video, `video_timestamps.parquet` es la referencia temporal autoritativa. El archivo MP4 es una representación visual y puede ser reajustado al finalizar para que su duración coincida con la duración observada de la sesión.
+
+## Project structure / Estructura del proyecto
+
+```text
+headtracker_refactor/
+├── main.py
+├── requirements.txt
+├── README.md
+├── config/
+│   └── config.example.json
+├── docs/
+│   ├── es/
+│   │   └── GUIA_USUARIO.md
+│   └── en/
+│       └── USER_GUIDE.md
+├── legacy/
+│   └── head_tracker_original.py
+└── headtracker/
+    ├── core/
+    ├── acquisition/
+    ├── io/
+    ├── ui/
+    ├── interfaces/
+    └── tools/
+```
+
+## Current status
+
+This is laboratory/research software under active development. Before collecting critical experimental data, validate camera timing, LSL markers, calibration and output files with the exact hardware and experimental software that will be used in the study.
