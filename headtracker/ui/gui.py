@@ -305,8 +305,13 @@ class CalibrationThread(QThread):
                 config_path = tmp / "config.json"
                 result_path = tmp / "result.json"
                 self.cfg.save(config_path)
-                args = [
-                    sys.executable, "-m", "headtracker.tools.calibration_worker",
+                if getattr(sys, "frozen", False):
+                    # Frozen (PyInstaller) build: no separate Python interpreter
+                    # to target with `-m`, so relaunch this same exe in worker mode.
+                    args = [sys.executable, "--calibration-worker"]
+                else:
+                    args = [sys.executable, "-m", "headtracker.tools.calibration_worker"]
+                args += [
                     "--config", str(config_path),
                     "--result", str(result_path),
                     "--language", str(self.cfg.language),

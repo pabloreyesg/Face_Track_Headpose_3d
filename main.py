@@ -28,6 +28,16 @@ def parse_args():
 
 
 def main():
+    # Internal re-entry point: when frozen (PyInstaller), there is no separate
+    # Python interpreter to run `-m headtracker.tools.calibration_worker`, so
+    # the GUI relaunches this same executable with this hidden flag instead.
+    # Must be checked before parse_args(), since the worker has its own
+    # required arguments that the GUI/CLI parser above doesn't know about.
+    if len(sys.argv) > 1 and sys.argv[1] == "--calibration-worker":
+        sys.argv = [sys.argv[0]] + sys.argv[2:]
+        from headtracker.tools.calibration_worker import main as worker_main
+        raise SystemExit(worker_main())
+
     args = parse_args()
     if args.cli:
         from headtracker.interfaces.cli import main as cli_main
