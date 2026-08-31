@@ -1,6 +1,6 @@
-# HeadTracker
+# Face and Head Tracker
 
-HeadTracker is a laboratory application for real-time head tracking using MediaPipe, OpenCV and Lab Streaming Layer (LSL).
+Face and HeadTracker is a laboratory application for real-time face - head tracking using MediaPipe, OpenCV and Lab Streaming Layer (LSL).
 
 HeadTracker es una aplicación de laboratorio para seguimiento de la cabeza en tiempo real mediante MediaPipe, OpenCV y Lab Streaming Layer (LSL).
 
