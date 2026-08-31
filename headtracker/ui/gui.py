@@ -327,13 +327,21 @@ class CalibrationThread(QThread):
                 self._proc = subprocess.Popen(args)
                 code = self._proc.wait()
                 self._proc = None
-                if code != 0:
-                    self.failed.emit(f"calibration process exited with code {code}")
+                # The worker writes result.json (with an "error" field) on every
+                # failure path before returning its exit code, so prefer that
+                # specific message over the bare exit code whenever it's there.
+                data = None
+                if result_path.exists():
+                    try:
+                        data = json.loads(result_path.read_text(encoding="utf-8"))
+                    except Exception:
+                        data = None
+                if data is None:
+                    if code != 0:
+                        self.failed.emit(f"calibration process exited with code {code}")
+                    else:
+                        self.failed.emit("calibration result missing")
                     return
-                if not result_path.exists():
-                    self.failed.emit("calibration result missing")
-                    return
-                data = json.loads(result_path.read_text(encoding="utf-8"))
                 if not data.get("ok", False):
                     self.failed.emit(str(data.get("error", "calibration")))
                     return
