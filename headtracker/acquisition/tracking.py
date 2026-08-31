@@ -28,9 +28,21 @@ def suppress_native_stderr():
         os.close(saved_fd)
 
 
+def _bundled_model_path(filename: str) -> str | None:
+    """Path to a model bundled inside a frozen (PyInstaller) executable, if any."""
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return None
+    candidate = os.path.join(base, filename)
+    return candidate if os.path.exists(candidate) else None
+
+
 def ensure_model(path: str, url: str) -> str | None:
     if os.path.exists(path):
         return path
+    bundled = _bundled_model_path(os.path.basename(path))
+    if bundled:
+        return bundled
     print(t("model_download", path=path))
     try:
         urllib.request.urlretrieve(url, path)

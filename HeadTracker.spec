@@ -5,7 +5,10 @@
 
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+# Bundle the MediaPipe face landmarker model so the exe works fully offline
+# (headtracker.acquisition.tracking.ensure_model falls back to this path
+# when it isn't found next to the exe and there's no network).
+datas = [("assets/models/face_landmarker.task", ".")]
 binaries = []
 hiddenimports = []
 
