@@ -16,7 +16,16 @@ from .pose import crop_to_square, get_head_orientation, get_distance_mm, landmar
 
 @contextlib.contextmanager
 def suppress_native_stderr():
-    stderr_fd = sys.stderr.fileno()
+    # In a windowed (console=False) PyInstaller build, sys.stderr is None
+    # (no real stream to redirect), so just skip suppression in that case.
+    stream = sys.stderr
+    try:
+        stderr_fd = stream.fileno() if stream is not None else None
+    except (AttributeError, OSError, ValueError):
+        stderr_fd = None
+    if stderr_fd is None:
+        yield
+        return
     saved_fd = os.dup(stderr_fd)
     devnull = os.open(os.devnull, os.O_WRONLY)
     try:

@@ -5,6 +5,17 @@ import sys
 import os
 
 
+def _ensure_std_streams():
+    """A windowed (console=False) PyInstaller build has no console, so
+    sys.stdout/sys.stderr are None. The app has print() calls and stderr
+    redirection scattered through code shared with the console CLI/worker
+    paths; give them a real (discarded) stream instead of crashing."""
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w")
+
+
 def _sanitize_opencv_qt_environment():
     """Prevent OpenCV wheel Qt paths from hijacking PySide6 on Linux."""
     try:
@@ -28,6 +39,8 @@ def parse_args():
 
 
 def main():
+    _ensure_std_streams()
+
     # Internal re-entry point: when frozen (PyInstaller), there is no separate
     # Python interpreter to run `-m headtracker.tools.calibration_worker`, so
     # the GUI relaunches this same executable with this hidden flag instead.
