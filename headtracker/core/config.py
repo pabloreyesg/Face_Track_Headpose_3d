@@ -40,6 +40,7 @@ class CalibrationConfig:
     stability_window: int = 10
     stability_std_deg: float = 2.0
     point_timeout_s: float = 6.0
+    window_size_px: int = 900
     min_range_deg: float = 6.0
     fallback_focal_length_px: float = 850.0
     known_eye_distance_mm: float = 63.0

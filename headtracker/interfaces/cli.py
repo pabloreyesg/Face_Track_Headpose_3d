@@ -6,7 +6,7 @@ import threading
 import time
 import cv2
 
-from headtracker.acquisition.camera import CameraWorker, select_camera_mode
+from headtracker.acquisition.camera import CameraWorker, list_available_cameras, select_camera_mode
 from headtracker.acquisition.calibration import calibrate
 from headtracker.core.config import load_config
 from headtracker.core.i18n import choose_language, set_language, t
@@ -43,6 +43,27 @@ def main():
 
     stop_event = threading.Event()
     stats = RuntimeStats()
+
+    print(t("camera_list_title"))
+    devices = list_available_cameras()
+    if not devices:
+        print(t("camera_list_none"))
+    else:
+        for i, dev in enumerate(devices):
+            print(t("camera_list_line", i=i, index=dev.index, name=dev.name, w=dev.width, h=dev.height))
+        default_pos = next((i for i, d in enumerate(devices) if d.index == cfg.camera.index), 0)
+        if len(devices) > 1:
+            choice = input(t("camera_list_choose", n=len(devices) - 1, default=default_pos)).strip()
+            try:
+                pos = int(choice) if choice else default_pos
+            except ValueError:
+                pos = default_pos
+            if not (0 <= pos < len(devices)):
+                pos = default_pos
+        else:
+            pos = default_pos
+        cfg.camera.index = devices[pos].index
+
     cap = cv2.VideoCapture(cfg.camera.index)
     if not cap.isOpened():
         raise RuntimeError("No se pudo abrir la cámara")

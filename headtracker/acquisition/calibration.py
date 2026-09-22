@@ -108,6 +108,8 @@ def _summary(cap, window_name, corrected, lr_ok, lr_range, ud_ok, ud_range):
 def calibrate(tracker, cap, known_distance_mm: float, cfg):
     window = t("calibration_window")
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
+    size = int(getattr(cfg, "window_size_px", 900))
+    cv2.resizeWindow(window, size, size)
     cv2.setWindowProperty(window, cv2.WND_PROP_TOPMOST, 1)
     print(t("calibration_intro"))
 

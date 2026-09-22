@@ -43,7 +43,15 @@ from PySide6.QtWidgets import (
 )
 
 from ..acquisition.calibration import calibrate
-from ..acquisition.camera import CameraMode, apply_camera_mode, probe_camera_modes, recommend_mode, CameraWorker
+from ..acquisition.camera import (
+    CameraDevice,
+    CameraMode,
+    apply_camera_mode,
+    list_available_cameras,
+    probe_camera_modes,
+    recommend_mode,
+    CameraWorker,
+)
 from ..core.config import load_config
 from ..core.i18n import set_language
 from ..io.logger import AsyncSessionLogger
@@ -75,6 +83,11 @@ GUI_TEXT = {
         "distance": "Distancia cara-cámara",
         "cm": "cm",
         "camera": "Cámara",
+        "detect_cameras": "Detectar cámaras",
+        "detecting_cameras": "Detectando cámaras conectadas (integradas y USB)…",
+        "camera_device": "Dispositivo",
+        "no_cameras": "No se detectó ninguna cámara.",
+        "camera_device_help": "Se detectan automáticamente las cámaras integradas y USB disponibles. Seleccione el dispositivo antes de detectar modos.",
         "detect_modes": "Detectar modos",
         "detecting_modes": "Detectando resoluciones y FPS reales…",
         "camera_mode": "Modo de cámara",
@@ -145,6 +158,11 @@ GUI_TEXT = {
         "distance": "Face-to-camera distance",
         "cm": "cm",
         "camera": "Camera",
+        "detect_cameras": "Detect cameras",
+        "detecting_cameras": "Detecting connected cameras (built-in and USB)…",
+        "camera_device": "Device",
+        "no_cameras": "No camera was detected.",
+        "camera_device_help": "Built-in and USB cameras are detected automatically. Select the device before detecting modes.",
         "detect_modes": "Detect modes",
         "detecting_modes": "Detecting actual resolutions and FPS…",
         "camera_mode": "Camera mode",
@@ -242,6 +260,18 @@ def _mode_label(mode: CameraMode, recommended: CameraMode | None, lang: str) -> 
         f"{mode.width}×{mode.height} | ~{mode.measured_fps:.1f} FPS "
         f"(request {mode.requested_fps:g} Hz){suffix}"
     )
+
+
+class CameraListThread(QThread):
+    finished_list = Signal(object)
+    failed = Signal(str)
+
+    def run(self):
+        try:
+            devices = list_available_cameras()
+            self.finished_list.emit(devices)
+        except Exception as exc:
+            self.failed.emit(str(exc))
 
 
 class CameraProbeThread(QThread):
@@ -638,9 +668,11 @@ class HeadTrackerWindow(QMainWindow):
         self.cfg.language = self.language
         self.sessions_dir = sessions_dir
 
+        self.camera_devices = []
         self.camera_modes = []
         self.recommended_mode = None
         self.calibration_data = None
+        self.camera_list_thread = None
         self.camera_probe_thread = None
         self.calibration_thread = None
         self.lsl_search_thread = None
@@ -660,6 +692,8 @@ class HeadTrackerWindow(QMainWindow):
         self.ui_timer.setInterval(100)
         self.ui_timer.timeout.connect(self._update_runtime_ui)
         self.ui_timer.start()
+
+        self._detect_cameras()
 
     def _build_ui(self):
         central = QWidget()
@@ -700,6 +734,16 @@ class HeadTrackerWindow(QMainWindow):
 
         camera_group = QGroupBox(self.txt["camera"])
         camera_layout = QVBoxLayout(camera_group)
+        cam_device_actions = QHBoxLayout()
+        self.detect_cameras_btn = QPushButton(self.txt["detect_cameras"])
+        self.detect_cameras_btn.clicked.connect(self._detect_cameras)
+        self.camera_device_combo = QComboBox()
+        self.camera_device_combo.setEnabled(False)
+        self.camera_device_combo.currentIndexChanged.connect(self._camera_device_changed)
+        cam_device_actions.addWidget(self.detect_cameras_btn)
+        cam_device_actions.addWidget(self.camera_device_combo, 1)
+        camera_layout.addLayout(cam_device_actions)
+        camera_layout.addWidget(self._muted_label(self.txt["camera_device_help"]))
         cam_actions = QHBoxLayout()
         self.detect_camera_btn = QPushButton(self.txt["detect_modes"])
         self.detect_camera_btn.clicked.connect(self._detect_camera_modes)
@@ -845,6 +889,8 @@ class HeadTrackerWindow(QMainWindow):
         for widget in (
             self.prefix_edit,
             self.distance_spin,
+            self.detect_cameras_btn,
+            self.camera_device_combo,
             self.detect_camera_btn,
             self.camera_combo,
             self.calibrate_btn,
@@ -856,10 +902,59 @@ class HeadTrackerWindow(QMainWindow):
         ):
             widget.setEnabled(enabled)
         if enabled:
+            self.camera_device_combo.setEnabled(bool(self.camera_devices))
             self.camera_combo.setEnabled(bool(self.camera_modes))
             self.calibrate_btn.setEnabled(self._selected_mode() is not None)
             self.use_lsl_btn.setEnabled(bool(self.lsl_streams))
             self.video_check.setEnabled(self.marker_inlet is not None)
+
+    def _detect_cameras(self):
+        if self.camera_list_thread is not None and self.camera_list_thread.isRunning():
+            return
+        self.detect_cameras_btn.setEnabled(False)
+        self.camera_device_combo.setEnabled(False)
+        self.camera_status.setText(self.txt["detecting_cameras"])
+        self.camera_list_thread = CameraListThread()
+        self.camera_list_thread.finished_list.connect(self._cameras_ready)
+        self.camera_list_thread.failed.connect(self._camera_list_failed)
+        self.camera_list_thread.start()
+
+    def _cameras_ready(self, devices):
+        self.camera_devices = list(devices)
+        self.detect_cameras_btn.setEnabled(True)
+        self.camera_device_combo.blockSignals(True)
+        self.camera_device_combo.clear()
+        current_pos = 0
+        for i, dev in enumerate(self.camera_devices):
+            self.camera_device_combo.addItem(f"[{dev.index}] {dev.name} ({dev.width}x{dev.height})", dev)
+            if dev.index == self.cfg.camera.index:
+                current_pos = i
+        self.camera_device_combo.blockSignals(False)
+        if self.camera_devices:
+            self.camera_device_combo.setEnabled(True)
+            self.camera_device_combo.setCurrentIndex(current_pos)
+            self.cfg.camera.index = self.camera_devices[current_pos].index
+            self.camera_status.setText(self.txt["no_modes"])
+        else:
+            self.camera_status.setText(self.txt["no_cameras"])
+        self._update_ready_state()
+
+    def _camera_list_failed(self, error):
+        self.detect_cameras_btn.setEnabled(True)
+        QMessageBox.critical(self, self.txt["error"], str(error))
+
+    def _camera_device_changed(self):
+        dev = self.camera_device_combo.currentData()
+        if isinstance(dev, CameraDevice):
+            self.cfg.camera.index = dev.index
+        self.camera_modes = []
+        self.recommended_mode = None
+        self.camera_combo.clear()
+        self.camera_combo.setEnabled(False)
+        self.calibration_data = None
+        self.calibration_status.setText(self.txt["calibration_pending"])
+        self.camera_status.setText(self.txt["no_modes"])
+        self._update_ready_state()
 
     def _detect_camera_modes(self):
         if self.camera_probe_thread is not None and self.camera_probe_thread.isRunning():

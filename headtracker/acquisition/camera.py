@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import glob
+import platform
 import queue
 import threading
 import time
@@ -9,6 +11,72 @@ from pylsl import local_clock
 
 from ..core.i18n import t
 from ..core.models import FramePacket, RuntimeStats
+
+
+@dataclass(frozen=True)
+class CameraDevice:
+    index: int
+    name: str
+    width: int
+    height: int
+
+
+def _capture_backend():
+    system = platform.system()
+    if system == "Linux":
+        return cv2.CAP_V4L2
+    if system == "Windows":
+        return cv2.CAP_DSHOW
+    return cv2.CAP_ANY
+
+
+def _v4l2_device_name(index: int) -> str | None:
+    try:
+        with open(f"/sys/class/video4linux/video{index}/name", "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def list_available_cameras(max_index=10, warmup_frames=3):
+    """Enumerate camera devices that actually deliver frames.
+
+    Built-in laptop webcams and USB/UVC cameras both show up as plain
+    integer indices to OpenCV, so a fixed default (index 0) only ever
+    reaches the first one the OS enumerated -- typically the built-in
+    camera. We probe every candidate node and keep only the ones that
+    successfully return a frame: many UVC cameras expose extra
+    /dev/video* nodes (metadata-only) that open but never deliver frames.
+    """
+    backend = _capture_backend()
+    if platform.system() == "Linux":
+        indices = sorted(
+            int(node[len("/dev/video"):]) for node in glob.glob("/dev/video*")
+            if node[len("/dev/video"):].isdigit()
+        )
+        if not indices:
+            indices = list(range(max_index))
+    else:
+        indices = list(range(max_index))
+
+    devices = []
+    for index in indices:
+        cap = cv2.VideoCapture(index, backend)
+        if not cap.isOpened():
+            cap.release()
+            continue
+        ok = False
+        for _ in range(warmup_frames):
+            ok, _ = cap.read()
+            if ok:
+                break
+        if ok:
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            name = _v4l2_device_name(index) if platform.system() == "Linux" else None
+            devices.append(CameraDevice(index, name or f"{t('camera_generic_name')} {index}", width, height))
+        cap.release()
+    return devices
 
 
 @dataclass(frozen=True)
