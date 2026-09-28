@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2025 Pablo Reyes
+
 # === Verificación de dependencias ===
 import importlib
 import importlib.util

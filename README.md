@@ -104,3 +104,13 @@ headtracker_refactor/
 ## Current status
 
 This is laboratory/research software under active development. Before collecting critical experimental data, validate camera timing, LSL markers, calibration and output files with the exact hardware and experimental software that will be used in the study.
+
+## License
+
+Copyright (C) 2025 Pablo Reyes
+
+HeadTracker is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Third-party components keep their own licenses: OpenCV, MediaPipe (including the `face_landmarker.task` model) and PyArrow (Apache-2.0); NumPy and pandas (BSD-3-Clause); pylsl/liblsl (MIT); PySide6/Qt (LGPL-3.0). See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.

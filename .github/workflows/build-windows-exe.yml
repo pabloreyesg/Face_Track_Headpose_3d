@@ -29,10 +29,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HeadTracker-windows-exe
-          path: dist/HeadTracker.exe
+          path: |
+            dist/HeadTracker.exe
+            LICENSE
+            THIRD_PARTY_LICENSES.md
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/HeadTracker.exe
+          files: |
+            dist/HeadTracker.exe
+            LICENSE
+            THIRD_PARTY_LICENSES.md
