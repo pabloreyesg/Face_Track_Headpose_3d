@@ -6,9 +6,10 @@ from pathlib import Path
 from pylsl import local_clock
 
 
-def create_session_dir(root: str | Path, prefix: str) -> Path:
+def create_session_dir(root: str | Path, prefix: str, participant_code: str = "") -> Path:
     stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    path = Path(root) / f"{prefix}_{stamp}"
+    parts = [prefix, participant_code, stamp] if participant_code else [prefix, stamp]
+    path = Path(root) / "_".join(parts)
     path.mkdir(parents=True, exist_ok=False)
     return path
 
@@ -16,7 +17,8 @@ def create_session_dir(root: str | Path, prefix: str) -> Path:
 def write_metadata(path: Path, *, prefix, config, cap, measured_fps,
                    calibration_offset, focal_length_px, known_distance_cm,
                    marker_stream_info, marker_time_correction, calibration_quality_ok,
-                   video_enabled, lsl_integrity=None, stats=None, selected_camera_mode=None):
+                   video_enabled, lsl_integrity=None, stats=None, selected_camera_mode=None,
+                   participant_code=None):
     marker_info = None
     if marker_stream_info is not None:
         marker_info = dict(marker_stream_info)
@@ -34,6 +36,7 @@ def write_metadata(path: Path, *, prefix, config, cap, measured_fps,
 
     data = {
         "prefix": prefix,
+        "participant_code": participant_code or None,
         "session_start_iso": dt.datetime.now().isoformat(),
         "lsl_local_clock_at_metadata": local_clock(),
         "camera": {

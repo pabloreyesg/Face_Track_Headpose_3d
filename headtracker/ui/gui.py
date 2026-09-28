@@ -13,8 +13,8 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 from pylsl import StreamInlet, resolve_streams
-from PySide6.QtCore import QThread, QTimer, Signal, Qt
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QRegularExpression, QThread, QTimer, Signal, Qt
+from PySide6.QtGui import QImage, QPixmap, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -144,6 +144,10 @@ GUI_TEXT = {
         "select_camera_first": "Primero detecte y seleccione un modo de cámara.",
         "calibrate_first": "Debe completar la calibración antes de iniciar.",
         "prefix_required": "Ingrese un nombre/prefijo para el experimento.",
+        "participant": "Código de participante",
+        "participant_help": "Letras, números, - y _. Se agrega al nombre de la carpeta de sesión.",
+        "participant_empty_title": "Sin código de participante",
+        "participant_empty": "No se ingresó código de participante.\n\n¿Desea iniciar de todos modos?",
         "lsl_lost": "PERDIDO / RECUPERANDO",
         "close_running": "Hay una adquisición en curso. Deténgala antes de cerrar la aplicación.",
     },
@@ -219,6 +223,10 @@ GUI_TEXT = {
         "select_camera_first": "Detect and select a camera mode first.",
         "calibrate_first": "Calibration must be completed before starting.",
         "prefix_required": "Enter an experiment name/prefix.",
+        "participant": "Participant code",
+        "participant_help": "Letters, digits, - and _. Added to the session folder name.",
+        "participant_empty_title": "No participant code",
+        "participant_empty": "No participant code was entered.\n\nStart anyway?",
         "lsl_lost": "LOST / RECOVERING",
         "close_running": "An acquisition is running. Stop it before closing the application.",
     },
@@ -439,10 +447,11 @@ class CalibrationData:
 
 class AcquisitionRuntime:
     def __init__(self, cfg, sessions_dir, prefix, mode, calibration: CalibrationData,
-                 marker_inlet, marker_stream_info, video_requested):
+                 marker_inlet, marker_stream_info, video_requested, participant_code=""):
         self.cfg = cfg
         self.sessions_dir = sessions_dir
         self.prefix = prefix
+        self.participant_code = participant_code
         self.mode = mode
         self.calibration = calibration
         self.marker_inlet = marker_inlet
@@ -475,7 +484,7 @@ class AcquisitionRuntime:
         self.tracking_fps_runtime = 0.0
 
     def start(self):
-        self.session_dir = create_session_dir(self.sessions_dir, self.prefix)
+        self.session_dir = create_session_dir(self.sessions_dir, self.prefix, self.participant_code)
         self.cfg.save(self.session_dir / "config.json")
 
         self.cap = cv2.VideoCapture(self.cfg.camera.index)
@@ -576,6 +585,7 @@ class AcquisitionRuntime:
             video_enabled=self.video_enabled,
             lsl_integrity=self.lsl_integrity,
             selected_camera_mode=self.mode,
+            participant_code=self.participant_code,
         )
 
         self.camera_worker.start()
@@ -653,6 +663,7 @@ class AcquisitionRuntime:
                 lsl_integrity=self.lsl_integrity,
                 stats=self.stats,
                 selected_camera_mode=self.mode,
+                participant_code=self.participant_code,
             )
             self.cap.release()
             self.cap = None
@@ -722,6 +733,13 @@ class HeadTrackerWindow(QMainWindow):
         form = QFormLayout(general)
         self.prefix_edit = QLineEdit()
         self.prefix_edit.setPlaceholderText("session")
+        self.participant_edit = QLineEdit()
+        self.participant_edit.setPlaceholderText("P001")
+        self.participant_edit.setToolTip(self.txt["participant_help"])
+        # Mismos caracteres que en el nombre de carpeta: sin espacios ni separadores de ruta
+        self.participant_edit.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9_-]{0,40}"), self)
+        )
         self.distance_spin = QDoubleSpinBox()
         self.distance_spin.setRange(20.0, 300.0)
         self.distance_spin.setValue(60.0)
@@ -729,6 +747,7 @@ class HeadTrackerWindow(QMainWindow):
         self.distance_spin.setDecimals(1)
         self.distance_spin.valueChanged.connect(self._distance_changed)
         form.addRow(self.txt["experiment"], self.prefix_edit)
+        form.addRow(self.txt["participant"], self.participant_edit)
         form.addRow(self.txt["distance"], self.distance_spin)
         setup_layout.addWidget(general)
 
@@ -888,6 +907,7 @@ class HeadTrackerWindow(QMainWindow):
     def _set_setup_enabled(self, enabled: bool):
         for widget in (
             self.prefix_edit,
+            self.participant_edit,
             self.distance_spin,
             self.detect_cameras_btn,
             self.camera_device_combo,
@@ -1160,6 +1180,7 @@ class HeadTrackerWindow(QMainWindow):
         if not prefix:
             QMessageBox.warning(self, self.txt["error"], self.txt["prefix_required"])
             return
+        participant_code = self.participant_edit.text().strip()
         mode = self._selected_mode()
         if mode is None:
             QMessageBox.warning(self, self.txt["error"], self.txt["select_camera_first"])
@@ -1177,6 +1198,16 @@ class HeadTrackerWindow(QMainWindow):
             )
             if answer != QMessageBox.Yes:
                 return
+        if not participant_code:
+            answer = QMessageBox.warning(
+                self,
+                self.txt["participant_empty_title"],
+                self.txt["participant_empty"],
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if answer != QMessageBox.Yes:
+                return
 
         self.cfg.video.enabled = bool(self.video_check.isChecked())
         self.cfg.language = self.language
@@ -1189,6 +1220,7 @@ class HeadTrackerWindow(QMainWindow):
             self.marker_inlet,
             self.marker_stream_info,
             self.video_check.isChecked(),
+            participant_code=participant_code,
         )
         try:
             runtime.start()

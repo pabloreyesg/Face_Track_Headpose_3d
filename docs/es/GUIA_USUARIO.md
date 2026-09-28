@@ -95,6 +95,8 @@ python main.py --language es
 
 Introduzca un identificador o prefijo de sesión. El programa crea una carpeta de salida específica para esa adquisición.
 
+En **Código de participante** escriba el código del sujeto (letras, números, `-` y `_`; por ejemplo `P001`). La carpeta de sesión queda como `<prefijo>_<código>_<fecha>_<hora>` y el código se guarda en `session.json` (`participant_code`). Si se deja vacío, el programa pide confirmación antes de iniciar y la carpeta se nombra sin código.
+
 Evite incluir información personal identificable en el nombre de la sesión cuando no sea necesaria.
 
 ### 5.3 Detectar y seleccionar el modo de cámara

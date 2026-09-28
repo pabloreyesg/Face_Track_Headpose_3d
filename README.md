@@ -56,6 +56,16 @@ A custom configuration can be supplied with:
 python main.py --config config/config.example.json
 ```
 
+## One-click launcher (Linux) / Lanzador de un clic (Linux)
+
+```bash
+./install_launcher.sh
+```
+
+Creates a **HeadTracker** icon in the application menu and on the desktop. It runs `launch.sh`, which finds the project Python by itself (in order: `HEADTRACKER_PYTHON`, `venv_head/`, `.venv/`, `venv/` inside the repo, then the conda env `face`) and starts the app from the repo folder, so no environment activation is needed. Output and errors from the last run go to `last_run.log`. Re-run the installer if the folder is moved; remove the icon with `./install_launcher.sh --uninstall`.
+
+Crea el icono **HeadTracker** en el menú de aplicaciones y en el escritorio. Ejecuta `launch.sh`, que busca solo el Python del proyecto (en orden: `HEADTRACKER_PYTHON`, `venv_head/`, `.venv/`, `venv/` dentro del repo, y luego el entorno conda `face`) y arranca la app desde la carpeta del repo, sin necesidad de activar nada. La salida y los errores de la última ejecución quedan en `last_run.log`; si "no abre nada", revisar ese archivo. En KDE, la primera vez se confirma que el icono del escritorio es de confianza. Si se mueve la carpeta, volver a correr el instalador; para quitar el icono: `./install_launcher.sh --uninstall`.
+
 ## Privacy-oriented default behavior / Comportamiento predeterminado orientado a privacidad
 
 By default, camera images are not written to disk. The preview may be visible while frames are processed, but the frames are discarded after processing.

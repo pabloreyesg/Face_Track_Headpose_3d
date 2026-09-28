@@ -95,6 +95,8 @@ python main.py --language en
 
 Enter a session identifier or prefix. HeadTracker creates a dedicated output directory for the acquisition.
 
+In **Participant code** enter the subject code (letters, digits, `-` and `_`; e.g. `P001`). The session folder is named `<prefix>_<code>_<date>_<time>` and the code is stored in `session.json` (`participant_code`). If left empty, HeadTracker asks for confirmation before starting and the folder is named without a code.
+
 Avoid including personally identifiable information in the session name unless it is required by the study protocol.
 
 ### 5.3 Detect and select the camera mode
